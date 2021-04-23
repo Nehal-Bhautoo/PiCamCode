@@ -8,18 +8,22 @@ from flask import Flask, render_template, Response, request
 import serial
 
 
-# sudo rfcomm listen /dev/rfcomm0
-bluetoothSerial = serial.Serial("/dev/rfcomm1", baudrate=115200)
+# sudo rfcomm listen /dev/rfcomm1
+
 app = Flask(__name__, template_folder="templates")
+# try:
+#     bluetoothSerial = serial.Serial("/dev/rfcomm1", baudrate=115200)
+# except:
+#     print("error")
 
 
 def get_frame():
     # initialize the camera and grab a reference to the raw camera capture
     camera = PiCamera()
-    camera.resolution = (320, 240)
+    camera.resolution = (640, 480)
     camera.framerate = 30
     camera.rotation = 180
-    rawCapture = PiRGBArray(camera, size = (320, 240))
+    rawCapture = PiRGBArray(camera, size = (640, 480))
     avg = None
 
     # allow the camera to adjust to lighting/white balance
@@ -69,22 +73,26 @@ def get_frame():
             
         # show the frame
         imageCode = cv2.imencode('.jpg', frame)[1]
+        #print(frame.dtype)
         stringData = imageCode.tostring()
+#         get_blueCon(imageCode)
         # clear the stream in preparation for the next frame
         rawCapture.truncate(0)
-        get_blueCon(bytes(stringData))
         yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + stringData + b'\r\n\r\n')
+               b'Content-Type: image/jpeg\r\n\r\n' + stringData + b'\r\n\r\n') 
+        
 
 
 
-def get_blueCon(frame):
-    try:
-        bluetoothSerial.write(frame)
-    except KeyboardInterrupt:
-        print("QUIT")
+
+# def get_blueCon(frame):
+#     try:
+#         bluetoothSerial.write(frame)
+#     except SerialException:
+#         print("QUIT")
 
 
+    
 
 
 @app.route('/')
@@ -95,13 +103,13 @@ def index():
 @app.route('/vid')
 def vid():
     return Response(get_frame(), mimetype='multipart/x-mixed-replace; boundary=frame')
-
+    
 
 
 
 if __name__ == '__main__':
-    get_frame()
-    app.run(host='192.168.100.27', port=5200, debug=True, threaded=True)
+    app.run(host='192.168.100.27', port=5200, debug=False, threaded=True)
+
 
 
 cv2.destroyAllWindows()
